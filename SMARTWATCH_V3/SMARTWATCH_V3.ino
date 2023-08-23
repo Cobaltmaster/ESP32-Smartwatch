@@ -17,6 +17,8 @@
 #include "soc/soc.h"  //disable brownout detector libraries
 #include "soc/rtc_cntl_reg.h"
 
+#include <initializer_list>  //Library to pass array elements directly to functions
+
 OpenWeatherMapCurrent client;
 OpenWeatherMapForecast client2;
 WiFiUDP ntpUDP;
@@ -26,9 +28,17 @@ char weekDay[7][6] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 char monthName[12][6] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
 uint8_t MAX_FORECASTS = 19;
+
+//////      CHANGE THESE      //////
+const char* WIFI_SSID = "T";  //Replace with your wifi credentials
+const char* WIFI_PASSWORD = "12345678";
+
 String OPEN_WEATHER_MAP_LANGUAGE = "en";
 String OPEN_WEATHER_MAP_APP_ID = "a754b7b33d8e1aca1b0e14ce8ff422f2";
 String OPEN_WEATHER_MAP_LOCATION_ID = "2641544";
+
+const int R1 = 105;  //voltage divider resistor values
+const int R2 = 215;
 
 
 //button pin declaration
@@ -47,7 +57,7 @@ Adafruit_SSD1306 display(128, 64, &Wire, -1);
 #include "BluetoothSerial.h"
 
 
-String device_name = "ESP32-BT-Slave";
+String device_name = "Marcel smartwatch";
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -104,7 +114,7 @@ const unsigned char Star[] PROGMEM = {
 
 // Array of all bitmaps for convenience. (Total bytes used to store images in PROGMEM = 528)
 const int epd_bitmap_allArray_LEN = 1;
-const unsigned char *epd_bitmap_allArray[1] = {
+const unsigned char* epd_bitmap_allArray[1] = {
   Star
 };
 
@@ -181,18 +191,20 @@ int r_score = 0;
 int paddle_height = 6;
 int paddle_width = 2;
 
+
 //bluetooth variables
-int bluetoothEnabled = false;
+bool bluetoothEnabled = false;
+bool bluetoothMusicEnabled = false;
 int state;
-RTC_DATA_ATTR char message[168];
-RTC_DATA_ATTR int messageLen;
+RTC_DATA_ATTR char message[168] = "Please connect to    Bluetooth";
+RTC_DATA_ATTR int messageLen = 30;
 
 
 bool flashLightOn = false;
 
-int menuPos = 0;
+RTC_DATA_ATTR int menuPos[] = { 0, 0 };
 
-
+float batteryVoltage;
 
 ESP32Time rtc(0);
 
@@ -228,7 +240,7 @@ void setup() {
   } else {
     WiFi.mode(WIFI_STA);
     timeClient.begin();
-    WiFi.begin("T", "12345678");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     wifiMillis = millis();
     wifiToggle = true;
   }
@@ -283,7 +295,7 @@ bool displayTime() {
   // Check if the time has changed or it's the initial display
   if (((rtc.getSecond()) != prevSeconds) || (change)) {
     // Clear the previous time display
-    display.fillRect(0, 0, 128, 19, SSD1306_BLACK);
+    display.fillRect(0, 0, 128, 15, SSD1306_BLACK);
 
     // Set the cursor position and font for displaying the time
     display.setCursor(30, 7);
@@ -310,7 +322,7 @@ bool displayTime() {
 
     // Reset the font and set the cursor position for additional information
     display.setFont();
-    display.setCursor(0, 20);
+    display.setCursor(0, 16);
 
     // Update the previous seconds
     prevSeconds = (rtc.getSecond());
@@ -359,14 +371,18 @@ void displayResult() {
 void stopwatch() {
   displayTime();
 
+  if (change) {
+    elapsed = pauseTime;
+    displayResult();
+  }
+
   if (!paused) {
     displayResult();
   }
 
   if (btnCheck(Btn1, 0)) {
-    // do an action, for example print on Serial
+    // Pause/unpause
     paused = !paused;
-
     if (paused) {
       pauseTime = elapsed;
     } else {
@@ -383,7 +399,16 @@ void stopwatch() {
 }
 
 void pongGame() {
-
+  if (change) {
+    gameRunning = false;
+    display.setCursor(0, 0);
+    display.clearDisplay();
+    display.println("PONG");
+    display.print("Paddle width: ");
+    display.print(paddle_height);
+    display.print(" px");
+    display.display();
+  }
 
   if (gameRunning == true) {
     // Update position of left paddle:
@@ -456,15 +481,6 @@ void pongGame() {
 
       ball_reset(true);
     }
-    if (change == true) {
-      display.setCursor(0, 0);
-      display.clearDisplay();
-      display.println("PONG");
-      display.print("Paddle width: ");
-      display.print(paddle_height);
-      display.print(" px");
-      display.display();
-    }
     if (btnCheck(Btn1, 0) == true) {
       paddle_height = paddle_height + 1;
       if (paddle_height > 15) {
@@ -483,6 +499,12 @@ void pongGame() {
 }
 
 void reactionGame() {
+  if (change) {
+    score = 1;
+    reactionReady = true;
+    gameRunning = false;
+  }
+
   displayTime();
 
   if (gameRunning) {
@@ -519,7 +541,7 @@ void reactionGame() {
         totalReaction += userReactionTime;
       }
       reactionReadyMillis = millis();
-    } 
+    }
   } else if (reactionReady) {
     //Serial.println("Press button 1 to Start!");
     display.fillRect(0, 19, 128, 64, SSD1306_BLACK);
@@ -609,8 +631,9 @@ void flashLight() {
     displayTime();
   }
   if (change == true) {
-    display.fillRect(0, 19, 128, 64, SSD1306_BLACK);
-    display.setCursor(0, 20);
+    flashLightOn = false;
+    display.fillRect(0, 15, 128, 64, SSD1306_BLACK);
+    display.setCursor(0, 16);
     display.println("Press btn1 to");
     display.print("toggle flashlight");
     display.display();
@@ -629,6 +652,19 @@ void flashLight() {
 }
 
 void blueTooth() {
+  if (change) {
+    SerialBT.begin(device_name);
+    bluetoothEnabled = true;
+    if (messageLen > 0) {
+      // State 2: Displaying the existing message again
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      for (i = 0; i < messageLen; i++) {
+        display.print(message[i]);
+      }
+      display.display();
+    }
+  }
   // Check if there is data available from bluetooth
   if (SerialBT.available() > 0) {
     state = SerialBT.read();
@@ -669,6 +705,21 @@ void blueTooth() {
 }
 
 void BLE() {
+  if (change) {
+    if (bluetoothMusicEnabled == false) {
+      bleKeyboard.begin();
+      bluetoothMusicEnabled = true;
+    }
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("PREVIOUS TRACK");
+    display.setCursor(0, 24);
+    display.print("Bottom left touch to play/pause");
+    display.setCursor(0, 56);
+    display.print("NEXT TRACK");
+    display.display();
+    change = false;
+  }
   if (bleKeyboard.isConnected()) {
     if (btnCheck(Btn1, 0)) {
       bleKeyboard.write(KEY_MEDIA_NEXT_TRACK);
@@ -681,13 +732,49 @@ void BLE() {
   }
 }
 
+void Battery() {
+
+  if (displayTime()) {
+
+    display.fillRect(0, 15, 128, 64, SSD1306_BLACK);
+
+    batteryVoltage = (analogRead(36) * 3.3 / 4095);
+    display.println("Raw voltage:");
+    display.print(batteryVoltage);
+    display.println("V");
+
+    batteryVoltage = ((batteryVoltage * (R1 + R2) / R2));
+    display.println("Battery voltage:");
+    display.print(batteryVoltage);
+    display.println("V");
+
+    batteryVoltage = 123.0 - 123.0 / pow((1.0 + pow((batteryVoltage / 3.7), 80.0)), 0.165);
+    display.println("Battery percent:");
+    display.print(batteryVoltage);
+
+    display.display();
+  }
+}
+
 void menuDisplay() {
+  if (menuPos[0] == 0) {
+    menuDisplay2({ "Stopwatch", "Reaction game", "Flashlight", "Weather", "Pong game", "Bluetooth text", "Bluetooth music", "Battery" });
+  }
+}
 
+void menuDisplay2(std::initializer_list<const char*> words) {
 
+  i = 0;
   display.clearDisplay();
-  display.setCursor(3, 0);
+  display.fillRect(0, (8 * menuPos[1]), 2, 7, WHITE);
+
   // Display static text
-  display.fillRect(0, (8 * menuPos), 2, 7, WHITE);
+  for (const char* word : words) {
+    display.setCursor(3, (i * 8));
+    display.print(word);
+    i++;
+  }
+  /**display.setCursor(3, 0);
   display.print("Stopwatch");
   display.setCursor(3, 8);
   display.print("Reaction game");
@@ -701,6 +788,8 @@ void menuDisplay() {
   display.print("Bluetooth text");
   display.setCursor(3, 48);
   display.print("Bluetooth media");
+  display.setCursor(3,56);
+  display.print("Battery") **/
   display.display();
 }
 
@@ -728,7 +817,9 @@ void loop() {
       blueTooth();
     } else if (Mode == 6) {
       BLE();
-    } else {
+    } else if (Mode == 7) {
+      Battery();
+    } else if (Mode == 8) {
 
       //Menu mode
 
@@ -736,82 +827,53 @@ void loop() {
         menuDisplay();
       }
       if (btnCheck(Btn1, 0) == true) {
-        menuPos = menuPos + 1;
-        if (menuPos > 6) {
-          menuPos = 0;
+        menuPos[1] = menuPos[1] + 1;
+        if (menuPos[1] > 7) {
+          menuPos[1] = 0;
         }
         menuDisplay();
       }
       if (btnCheck(Btn3, 2) == true) {
-        menuPos = menuPos - 1;
-        if (menuPos < 0) {
-          menuPos = 6;
+        menuPos[1] = menuPos[1] - 1;
+        if (menuPos[1] < 0) {
+          menuPos[1] = 7;
         }
         menuDisplay();
       }
-      if (btnCheck(Btn2, 1)) {
-        //Choose mode
-        if (bluetoothEnabled) {
-          SerialBT.end();
-          bluetoothEnabled = false;
-        }
-        Mode = menuPos;
+      if (btnCheck(Btn2, 1)) {  //Choose mode
+
+        Mode = menuPos[1] + (menuPos[0] * 10);
+
         change = true;
-        elapsed = pauseTime;
-        if (Mode == 0) {  //Stopwatch
-          displayResult();
+        if (Mode == 0) {         //Stopwatch
         } else if (Mode == 1) {  //Reaction game
-          score = 1;
-          reactionReady = true;
-          gameRunning = false;
-
         } else if (Mode == 2) {  //Flashlight
-          flashLightOn = false;
-
         } else if (Mode == 3) {  //HumidityTemp
         } else if (Mode == 4) {  //Pong game
-          gameRunning = false;
-
         } else if (Mode == 5) {  //Bluetooth text
-          SerialBT.begin(device_name);
-          bluetoothEnabled = true;
-          if (messageLen > 0) {
-            // State 2: Displaying the existing message again
-            display.clearDisplay();
-            display.setCursor(0, 0);
-            for (i = 0; i < messageLen; i++) {
-              display.print(message[i]);
-            }
-            display.display();
-          }
-
         } else if (Mode == 6) {  //Bluetooth media control
-          bleKeyboard.begin();
-          display.clearDisplay();
-          display.setCursor(0, 0);
-          display.print("PREVIOUS TRACK");
-          display.setCursor(0, 24);
-          display.print("Bottom left touch to play/pause");
-          display.setCursor(0, 56);
-          display.print("NEXT TRACK");
-          display.display();
-          
-        } 
+        } else if (Mode == 7) {  //Battery
+        }
       }
     }
-    if (btnCheck(Btn2, 1) == true) {
+    if (btnCheck(Btn2, 1)) { //Enter menu mode
+      if (bluetoothEnabled) {
+        SerialBT.end();
+        bluetoothEnabled = false;
+      }
+
       menuDisplay();
-      Mode = 7;
+      Mode = 8;
     }
 
-    if ((wifiToggle == true) && ((millis() - wifiMillis) < 10000)) {
+    if ((wifiToggle == true) && ((millis() - wifiMillis) < 10000)) {  //WIFI CONNECTION
       if (WiFi.status() == WL_CONNECTED) {
 
         timeClient.update();
         Min = (timeClient.getMinutes());
         Seconds = (timeClient.getSeconds());
         time_t epochTime = timeClient.getEpochTime();
-        struct tm *ptm = gmtime((time_t *)&epochTime);
+        struct tm* ptm = gmtime((time_t*)&epochTime);
 
         rtc.setTime(Seconds, Min, (timeClient.getHours() + 1), (ptm->tm_mday), (ptm->tm_mon + 1), (ptm->tm_year + 1900));
 
