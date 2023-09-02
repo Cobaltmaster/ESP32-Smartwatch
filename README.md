@@ -1,6 +1,7 @@
 # ESP32-Smartwatch
 
 Parts list:
+
 1x 3.7v lipo battery 400mah (or bigger if you want more battery capacity)
 1x ESP-WROOM-32 chip (4mb flash is enough)
 1x ssd1306 128x64 oled
