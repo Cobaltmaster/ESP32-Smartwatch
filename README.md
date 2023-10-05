@@ -1,4 +1,6 @@
 # ESP32-Smartwatch
+Diy smartwatch project
+Feel free to ask questions, suggest changes and report bugs!
 
 Parts list:
 
