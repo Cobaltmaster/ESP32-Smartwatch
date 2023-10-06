@@ -1,5 +1,6 @@
 # ESP32-Smartwatch
 Diy smartwatch project
+![Time](https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/226897ad-4a96-420d-a253-7152519b6082)
 
 Feel free to ask questions, suggest changes and report bugs!
 
@@ -36,5 +37,8 @@ Parts list:
 
 Watch strap
 
+![Watch strap](https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/42d88dbd-78de-4b73-8184-78799cc4ab1f)
+
 ![Progress pics](https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/9c1bd91a-64b2-47b7-ace9-2d02050f8543)
 
+![Charging](https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/d6911025-c4c2-4499-8c30-260ef9d1b034)
