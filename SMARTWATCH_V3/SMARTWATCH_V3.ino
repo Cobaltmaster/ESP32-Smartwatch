@@ -34,8 +34,8 @@ const char* WIFI_SSID = "T";  //Replace with your wifi credentials
 const char* WIFI_PASSWORD = "12345678";
 
 String OPEN_WEATHER_MAP_LANGUAGE = "en";
-String OPEN_WEATHER_MAP_APP_ID = "a754b7b33d8e1aca1b0e14ce8ff422f2";
-String OPEN_WEATHER_MAP_LOCATION_ID = "2641544";
+String OPEN_WEATHER_MAP_APP_ID = "YOUR API CODE";
+String OPEN_WEATHER_MAP_LOCATION_ID = "YOUR LOCATION ID";
 
 const int R1 = 105;  //voltage divider resistor values
 const int R2 = 215;
