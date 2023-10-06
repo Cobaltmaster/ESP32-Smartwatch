@@ -1,6 +1,6 @@
 # ESP32-Smartwatch
 Diy smartwatch project
-<img src="https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/226897ad-4a96-420d-a253-7152519b6082" width="150" height="170">
+<img src="https://github.com/Cobaltmaster/ESP32-Smartwatch/assets/140275627/226897ad-4a96-420d-a253-7152519b6082" width="150" height="180">
 
 
 
